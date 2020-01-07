@@ -90,7 +90,10 @@ static void util_error (MIR_context_t ctx, const char *message);
 #include <float.h>
 #include <ctype.h>
 #include <limits.h>
-
+#ifdef _WIN32
+#define __x86_64__ 1
+#define LDBL_DECIMAL_DIG DBL_DECIMAL_DIG
+#endif
 static void interp_init (MIR_context_t ctx);
 static void finish_func_interpretation (MIR_item_t func_item);
 static void interp_finish (MIR_context_t ctx);
@@ -3238,9 +3241,12 @@ MIR_item_t _MIR_builtin_func (MIR_context_t ctx, MIR_module_t module, const char
 }
 
 /* New Page */
-
+#ifdef _WIN32
+#include "mman.h"
+#else
 #include <sys/mman.h>
 #include <unistd.h>
+#endif
 
 struct code_holder {
   uint8_t *start, *free, *bound;
@@ -3381,7 +3387,13 @@ void _MIR_update_code (MIR_context_t ctx, uint8_t *base, size_t nloc, ...) {
 static void code_init (MIR_context_t ctx) {
   if ((ctx->machine_code_ctx = malloc (sizeof (struct machine_code_ctx))) == NULL)
     (*error_func) (MIR_alloc_error, "Not enough memory for ctx");
+  #ifdef _WIN32
+  SYSTEM_INFO sysInfo;
+  GetSystemInfo (&sysInfo);
+  page_size = sysInfo.dwPageSize;
+  #else
   page_size = sysconf (_SC_PAGE_SIZE);
+  #endif
   VARR_CREATE (code_holder_t, code_holders, 128);
   VARR_CREATE (uint8_t, machine_insns, 1024);
 }

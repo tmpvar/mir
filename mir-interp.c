@@ -19,7 +19,9 @@
 #else
 #define ALWAYS_INLINE inline
 #endif
-
+#ifdef _WIN32
+#define alloca(v) _alloca(v)
+#endif
 typedef MIR_val_t *code_t;
 
 typedef struct func_desc {

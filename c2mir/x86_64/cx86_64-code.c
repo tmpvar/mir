@@ -3,7 +3,11 @@
 */
 
 #include "../mirc.h"
+#if defined(WIN32)
+#include "mirc-x86_64-win32.h"
+#else
 #include "mirc-x86_64-linux.h"
+#endif
 
 static const char *standard_includes[] = {mirc, x86_64_mirc};
 

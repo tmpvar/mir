@@ -1,12 +1,41 @@
+#define MIR_NO_GEN_DEBUG 1
 #include <string.h>
 #include <stdlib.h>
 #include <stdint.h>
+#ifdef _WIN32
+#define WIN32_LEAN_AND_MEAN
+#include <Windows.h>
+#include <stdint.h>  // portable: uint64_t   MSVC: __int64
+typedef struct timeval {
+  long tv_sec;
+  long tv_usec;
+} timeval;
+int gettimeofday (struct timeval *tp, struct timezone *tzp) {
+  // Note: some broken versions only have 8 trailing zero's, the correct epoch has 9 trailing zero's
+  // This magic number is the number of 100 nanosecond intervals since January 1, 1601 (UTC)
+  // until 00:00:00 January 1, 1970
+  static const uint64_t EPOCH = ((uint64_t) 116444736000000000ULL);
+
+  SYSTEMTIME system_time;
+  FILETIME file_time;
+  uint64_t time;
+
+  GetSystemTime (&system_time);
+  SystemTimeToFileTime (&system_time, &file_time);
+  time = ((uint64_t) file_time.dwLowDateTime);
+  time += ((uint64_t) file_time.dwHighDateTime) << 32;
+
+  tp->tv_sec = (long) ((time - EPOCH) / 10000000L);
+  tp->tv_usec = (long) (system_time.wMilliseconds * 1000);
+  return 0;
+}
+#else
 #include <dlfcn.h>
 #include <sys/time.h>
 #if defined(__unix__) || defined(__APPLE__)
 #include <sys/stat.h>
 #endif
-
+#endif
 #include "c2mir.h"
 #include "mir-gen.h"
 
@@ -63,6 +92,13 @@ static const char *std_lib_dirs[] = {"/lib64",
 #endif
 #endif
 static const char *lib_suffix = ".so";
+#else
+static lib_t std_libs[] = {{"msvcrt.dll", NULL}, {"kernel.dll", NULL}};
+static const char *std_lib_dirs[] = {NULL};
+static const char *lib_suffix = ".dll";
+#define dlopen(n, na) LoadLibrary(n)
+#define dlclose(n) FreeLibrary(n)
+#define dlsym(a, b) GetProcAddress(a,b)
 #endif
 
 #ifdef _WIN32
@@ -311,10 +347,17 @@ static void *import_resolver (const char *name) {
           && (sym = dlsym (handler, name)) != NULL)
         break;
   if (sym == NULL) {
+    #ifdef _WIN32
+    if (strcmp (name, "LoadLibrary") == 0) return LoadLibrary;
+    if (strcmp (name, "FreeLibrary") == 0) return FreeLibrary;
+    if (strcmp (name, "GetProcAddress") == 0) return GetProcAddress;
+    //if (strcmp (name, "stat") == 0) return stat;
+    #else
     if (strcmp (name, "dlopen") == 0) return dlopen;
     if (strcmp (name, "dlclose") == 0) return dlclose;
     if (strcmp (name, "dlsym") == 0) return dlsym;
     if (strcmp (name, "stat") == 0) return stat;
+    #endif
     fprintf (stderr, "can not load symbol %s\n", name);
     close_std_libs ();
     exit (1);

@@ -70,7 +70,9 @@
 #include <inttypes.h>
 
 #include <assert.h>
-
+#ifdef _WIN32
+#define __x86_64__ 1
+#endif
 #ifdef NDEBUG
 static inline int gen_assert (int cond) { return 0 && cond; }
 #else
@@ -5703,7 +5705,9 @@ void MIR_gen_init (MIR_context_t ctx) {
   gen_ctx->lr_ctx = NULL;
   gen_ctx->ra_ctx = NULL;
   gen_ctx->selection_ctx = NULL;
-  debug_file = NULL;
+  #if !MIR_NO_GEN_DEBUG
+    debug_file = NULL;
+  #endif
   VARR_CREATE (loop_node_t, loop_nodes, 32);
   VARR_CREATE (loop_node_t, queue_nodes, 32);
   VARR_CREATE (loop_node_t, loop_entries, 16);
