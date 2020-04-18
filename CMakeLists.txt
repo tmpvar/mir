@@ -27,6 +27,22 @@ endif()
 
 target_link_libraries(c2m mir mir_gen ${EXTRA_LIBS})
 
+add_definitions(-DHOT_RELOAD_SOURCE_FILE="${CMAKE_CURRENT_LIST_DIR}/hot-reload/hello.c")
+add_executable (hot-reload
+  c2mir/c2mir.c
+  c2mir/c2mir.h
+  hot-reload/main.c
+  mir-gen.h
+)
+set_property(TARGET hot-reload PROPERTY C_STANDARD 11)
+target_include_directories(hot-reload PRIVATE ./)
+
+if(UNIX)
+    set(EXTRA_LIBS dl m)
+endif()
+
+target_link_libraries(hot-reload mir mir_gen ${EXTRA_LIBS})
+
 # add_executable (l2m "llvm2mir/llvm2mir-driver.c" "llvm2mir/llvm2mir.h")
 # target_include_directories(l2m PRIVATE ./)
 # target_link_libraries(l2m mir mir_gen llvm2mir)
