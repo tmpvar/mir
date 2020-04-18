@@ -1,4 +1,3 @@
-#define MIR_NO_GEN_DEBUG 1
 #include <string.h>
 #include <stdlib.h>
 #include <stdint.h>
@@ -92,7 +91,7 @@ static const char *std_lib_dirs[] = {"/lib64",
 #endif
 #endif
 static const char *lib_suffix = ".so";
-#else
+#elif defined(WIN32)
 static lib_t std_libs[] = {{"msvcrt.dll", NULL}, {"kernel.dll", NULL}};
 static const char *std_lib_dirs[] = {NULL};
 static const char *lib_suffix = ".dll";
