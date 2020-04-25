@@ -350,6 +350,20 @@ static FILE *get_output_file (const char **base_name, const char *source_name, c
   exit (1);  // ???
 }
 
+// external return by val tests
+#include "c2mir-tests/c2mir-test-data.h"
+ByVal byval_extern(int v) {
+  return (ByVal){
+    .value = v
+  };
+}
+
+ByVal *byval_ptr_extern(int v) {
+  ByVal *ret = malloc(sizeof(ByVal));
+  ret->value = v;
+  return ret;
+}
+
 int main (int argc, char *argv[], char *env[]) {
   int i, ret_code;
   size_t len;
@@ -522,6 +536,11 @@ int main (int argc, char *argv[], char *env[]) {
       open_std_libs ();
       MIR_load_external (ctx, "abort", fancy_abort);
       MIR_load_external (ctx, "_MIR_flush_code_cache", _MIR_flush_code_cache);
+
+      MIR_load_external (ctx, "printf", printf);
+      MIR_load_external (ctx, "byval_extern", byval_extern);
+      MIR_load_external (ctx, "byval_ptr_extern", byval_ptr_extern);
+
       if (interp_exec_p) {
         MIR_link (ctx, MIR_set_interp_interface, import_resolver);
         start_time = real_usec_time ();
@@ -549,6 +568,19 @@ int main (int argc, char *argv[], char *env[]) {
                    (real_usec_time () - start_time) / 1000.0);
           fprintf (stderr, "exit code: %d\n", ret_code);
         }
+
+        // run byval_extern && byval_ptr_extern for sanity
+        ByVal r_val = byval_extern(EXPECT);
+        ByVal *r_ptr = byval_ptr_extern(EXPECT);
+        printf("byval_extern: %x (%i)\n", r_val.value, r_val.value);
+        printf("byval_ptr_extern: %x (%i)\n", r_ptr->value, r_ptr->value);
+        printf("jit result: %x (%i)\n", ret_code, ret_code);
+
+        if (r_val.value != EXPECT || r_ptr->value != EXPECT || ret_code != EXPECT) {
+          printf("FAIL\n");
+          ret_code = 1;
+        }
+
         MIR_gen_finish (ctx);
       }
     }
